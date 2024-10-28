@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Panel - Attendance</title>
+    <style>
+        .container { width: 300px; margin: 20px auto; }
+        .attendance-item { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Attendance Records</h2>
+        <div id="attendance-list"></div>
+        <h3>Total Absence: <span id="total-absence">0</span></h3>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadAttendance);
+
+        function loadAttendance() {
+            const attendanceList = JSON.parse(localStorage.getItem("attendance")) || [];
+            const attendanceDisplay = document.getElementById("attendance-list");
+            attendanceDisplay.innerHTML = "";
+            let totalAbsences = 0;
+
+            attendanceList.forEach((item) => {
+                const div = document.createElement("div");
+                div.className = "attendance-item";
+                div.textContent = `${item.date}: ${item.status}`;
+                attendanceDisplay.appendChild(div);
+                if (item.status === "absence") totalAbsences++;
+            });
+
+            document.getElementById("total-absence").textContent = totalAbsences;
+        }
+    </script>
+</body>
+</html>

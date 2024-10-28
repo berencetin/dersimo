@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veli Paneli - Ödev Durum Kontrol</title>
+    <style>
+        .container { width: 300px; margin: 20px auto; }
+        .homework-item { display: flex; align-items: center; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Ödev Durumu Kontrol</h2>
+        <div id="homework-list"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadHomeworks);
+
+        function loadHomeworks() {
+            const homeworks = JSON.parse(localStorage.getItem("homeworks")) || [];
+            const homeworkList = document.getElementById("homework-list");
+            homeworkList.innerHTML = "";
+
+            homeworks.forEach((homework, index) => {
+                const div = document.createElement("div");
+                div.className = "homework-item";
+
+                const label = document.createElement("label");
+                // Durumu göster
+                let statusText = homework.studentDid ? " - Student Did" : "";
+                if (homework.teacherChecked) {
+                    statusText = " - Teacher Approved";
+                } else if (homework.teacherRejected) {
+                    statusText = " - Teacher Rejected";
+                }
+
+                label.textContent = homework.name + statusText;
+
+                div.appendChild(label);
+                homeworkList.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>

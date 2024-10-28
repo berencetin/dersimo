@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sınav Sonuçları Görüntüleme</title>
+    <style>
+        .container { width: 500px; margin: 20px auto; }
+        .exam-section { margin: 20px 0; }
+        .result { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Sınav Sonuçları</h2>
+        <div id="exam-list"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadExams);
+
+        function loadExams() {
+            const exams = JSON.parse(localStorage.getItem("exams")) || [];
+            const examList = document.getElementById("exam-list");
+            examList.innerHTML = "";
+
+            exams.forEach(exam => {
+                const div = document.createElement("div");
+                div.className = "exam-section";
+
+                const title = document.createElement("h3");
+                title.textContent = exam.name;
+
+                const tytSection = createResultSection("TYT", exam.tyt);
+                const aytSection = createResultSection("AYT", exam.ayt);
+
+                div.appendChild(title);
+                div.appendChild(tytSection);
+                div.appendChild(aytSection);
+                examList.appendChild(div);
+            });
+        }
+
+        function createResultSection(name, subjects) {
+            const section = document.createElement("div");
+            section.className = "exam-section";
+
+            const header = document.createElement("h4");
+            header.textContent = name;
+            section.appendChild(header);
+
+            Object.keys(subjects).forEach(subject => {
+                const resultDiv = document.createElement("div");
+                resultDiv.className = "result";
+                
+                const net = calculateNet(subjects[subject].correct, subjects[subject].wrong);
+                resultDiv.textContent = `${subject} - Doğru: ${subjects[subject].correct}, Yanlış: ${subjects[subject].wrong}, Boş: ${subjects[subject].empty}, Net: ${net}`;
+                
+                section.appendChild(resultDiv);
+            });
+
+            return section;
+        }
+
+        function calculateNet(correct, wrong) {
+            return correct - Math.floor(wrong / 4);
+        }
+    </script>
+</body>
+</html>
