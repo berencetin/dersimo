@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework Entry</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Ödev Ekle</h1>
+    <form id="homeworkForm">
+        <label for="assignmentTitle">Ödev Başlığı:</label>
+        <input type="text" id="assignmentTitle" placeholder="Ödev başlığını girin..." required />
+
+        <label for="assignmentClass">Sınıf:</label>
+        <select id="assignmentClass" required>
+            <option value="L1">L1</option>
+            <option value="L2">L2</option>
+            <option value="L3">L3</option>
+            <option value="M1">M1</option>
+            <option value="M2">M2</option>
+            <option value="M3">M3</option>
+        </select>
+
+        <label for="assignmentDeadline">Son Teslim Tarihi:</label>
+        <input type="date" id="assignmentDeadline" required />
+
+        <label for="assignmentDescription">Açıklama:</label>
+        <textarea id="assignmentDescription" rows="4" placeholder="Ödev açıklamasını girin..." required></textarea>
+
+        <button type="submit">Kaydet</button>
+    </form>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+        import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuJH09nuhqi4zKIWVlopMh6qe46WDlITg",
+            authDomain: "dersimo-31041.firebaseapp.com",
+            projectId: "dersimo-31041",
+            storageBucket: "dersimo-31041.appspot.com",
+            messagingSenderId: "653988435501",
+            appId: "1:653988435501:web:d933b40d23e8628e7b8aa4",
+            measurementId: "G-D2RBEG50Y6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const homeworkForm = document.getElementById('homeworkForm');
+
+        homeworkForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const assignmentTitle = document.getElementById('assignmentTitle').value;
+            const classSelected = document.getElementById('assignmentClass').value;
+            const deadline = document.getElementById('assignmentDeadline').value;
+            const description = document.getElementById('assignmentDescription').value;
+            const teacherEmail = localStorage.getItem('teacherEmail');
+
+            if (!assignmentTitle || !classSelected || !deadline || !description) {
+                alert('Lütfen tüm alanları doldurun!');
+                return;
+            }
+
+            try {
+                const taskData = {
+                    title: assignmentTitle,
+                    class: classSelected,
+                    deadline,
+                    description,
+                    teacherEmail
+                };
+
+                const tasksRef = doc(db, 'classes', classSelected, 'tasks', assignmentTitle);
+                await setDoc(tasksRef, taskData);
+
+                alert('Ödev başarıyla kaydedildi!');
+            } catch (error) {
+                console.error('Error saving assignment:', error);
+                alert('Ödev kaydedilirken bir hata oluştu.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,2 +1,0 @@
-# dersimo
-dersimo spt

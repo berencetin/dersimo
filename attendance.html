@@ -3,38 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Panel - Attendance</title>
-    <style>
-        .container { width: 300px; margin: 20px auto; }
-        .attendance-item { margin: 10px 0; }
-    </style>
+    <title>Devamsızlık</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Attendance Records</h2>
-        <div id="attendance-list"></div>
-        <h3>Total Absence: <span id="total-absence">0</span></h3>
+    <h1>Devamsızlık</h1>
+    <div id="attendanceContent">
+        <p>Devamsızlık verileri yükleniyor...</p>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", loadAttendance);
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+        import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
 
-        function loadAttendance() {
-            const attendanceList = JSON.parse(localStorage.getItem("attendance")) || [];
-            const attendanceDisplay = document.getElementById("attendance-list");
-            attendanceDisplay.innerHTML = "";
-            let totalAbsences = 0;
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuJH09nuhqi4zKIWVlopMh6qe46WDlITg",
+            authDomain: "dersimo-31041.firebaseapp.com",
+            projectId: "dersimo-31041",
+            storageBucket: "dersimo-31041.appspot.com",
+            messagingSenderId: "653988435501",
+            appId: "1:653988435501:web:d933b40d23e8628e7b8aa4",
+            measurementId: "G-D2RBEG50Y6"
+        };
 
-            attendanceList.forEach((item) => {
-                const div = document.createElement("div");
-                div.className = "attendance-item";
-                div.textContent = `${item.date}: ${item.status}`;
-                attendanceDisplay.appendChild(div);
-                if (item.status === "absence") totalAbsences++;
-            });
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-            document.getElementById("total-absence").textContent = totalAbsences;
-        }
+        const attendanceContent = document.getElementById('attendanceContent');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userEmail = user.email;
+
+                try {
+                    // Fetch student class from students collection
+                    const studentsQuery = query(collection(db, "students"), where("email", "==", userEmail));
+                    const studentSnapshot = await getDocs(studentsQuery);
+
+                    if (studentSnapshot.empty) {
+                        attendanceContent.innerHTML = "<p>Öğrenci bilgisi bulunamadı. Lütfen veritabanını kontrol edin.</p>";
+                        return;
+                    }
+
+                    const studentData = studentSnapshot.docs[0].data();
+                    console.log("Student Data:", studentData);
+
+                    const studentClass = studentData.class;
+
+                    if (!studentClass) {
+                        attendanceContent.innerHTML = "<p>Öğrenci sınıf bilgisi eksik. Lütfen yöneticinizle iletişime geçin ve veritabanını güncelleyin.</p>";
+                        return;
+                    }
+
+                    // Fetch attendance data based on class, email, and present status
+                    const attendanceQuery = query(
+                        collection(db, "attendance"),
+                        where("class", "==", studentClass),
+                        where("email", "==", userEmail),
+                        where("present", "==", false)
+                    );
+                    const attendanceSnapshot = await getDocs(attendanceQuery);
+
+                    console.log("Attendance Data (Docs):", attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+                    if (attendanceSnapshot.empty) {
+                        attendanceContent.innerHTML = "<p>Hiç devamsızlık kaydı bulunmamaktadır.</p>";
+                        return;
+                    }
+
+                    // Display absent days
+                    let attendanceHTML = '<ul>';
+                    attendanceSnapshot.forEach(doc => {
+                        const attendance = doc.data();
+                        if (!attendance.date) {
+                            console.warn("Eksik tarih bilgisi: ", doc.id);
+                            return;
+                        }
+                        attendanceHTML += `<li><strong>Tarih:</strong> ${attendance.date}</li>`;
+                    });
+                    attendanceHTML += '</ul>';
+                    attendanceContent.innerHTML = attendanceHTML;
+                } catch (error) {
+                    console.error("Error fetching attendance data:", error);
+                    attendanceContent.innerHTML = `<p>Devamsızlık verileri alınırken bir hata oluştu: ${error.message}</p>`;
+                }
+            } else {
+                attendanceContent.innerHTML = "<p>Lütfen önce giriş yapın.</p>";
+            }
+        });
     </script>
 </body>
 </html>

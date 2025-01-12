@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Entry</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Devamsızlık Girişi</h1>
+    <form id="attendanceForm">
+        <label for="attendanceDate">Tarih:</label>
+        <input type="date" id="attendanceDate" required />
+
+        <label for="classSelect">Sınıf:</label>
+        <select id="classSelect" required>
+            <option value="L1">L1</option>
+            <option value="L2">L2</option>
+            <option value="L3">L3</option>
+            <option value="M1">M1</option>
+            <option value="M2">M2</option>
+            <option value="M3">M3</option>
+        </select>
+
+        <div id="studentList">
+            <!-- Öğrenciler yüklenecek -->
+        </div>
+
+        <button type="submit">Kaydet</button>
+    </form>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+        import { getFirestore, doc, setDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuJH09nuhqi4zKIWVlopMh6qe46WDlITg",
+            authDomain: "dersimo-31041.firebaseapp.com",
+            projectId: "dersimo-31041",
+            storageBucket: "dersimo-31041.appspot.com",
+            messagingSenderId: "653988435501",
+            appId: "1:653988435501:web:d933b40d23e8628e7b8aa4",
+            measurementId: "G-D2RBEG50Y6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const classSelect = document.getElementById('classSelect');
+        const studentList = document.getElementById('studentList');
+        const attendanceForm = document.getElementById('attendanceForm');
+
+        classSelect.addEventListener('change', async () => {
+            const selectedClass = classSelect.value;
+
+            try {
+                const studentsQuery = query(collection(db, 'students'), where('class', '==', selectedClass));
+                const studentsSnapshot = await getDocs(studentsQuery);
+
+                if (studentsSnapshot.empty) {
+                    studentList.innerHTML = '<p>Hiçbir öğrenci bulunamadı.</p>';
+                    return;
+                }
+
+                let studentsHTML = '';
+                studentsSnapshot.forEach((doc) => {
+                    const student = doc.data();
+                    studentsHTML += `
+                        <div>
+                            <input type="checkbox" id="${doc.id}" data-student-id="${doc.id}" />
+                            <label for="${doc.id}">${student.name}</label>
+                        </div>
+                    `;
+                });
+
+                studentList.innerHTML = studentsHTML;
+            } catch (error) {
+                console.error('Error loading students:', error);
+                studentList.innerHTML = '<p>Öğrenciler yüklenirken bir hata oluştu.</p>';
+            }
+        });
+
+        attendanceForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const date = document.getElementById('attendanceDate').value;
+            const selectedClass = classSelect.value;
+            const checkboxes = studentList.querySelectorAll('input[type="checkbox"]');
+
+            if (!date || !selectedClass || checkboxes.length === 0) {
+                alert('Lütfen tüm alanları doldurun!');
+                return;
+            }
+
+            try {
+                for (const checkbox of checkboxes) {
+                    const studentId = checkbox.dataset.studentId;
+                    const isPresent = checkbox.checked;
+
+                    const attendanceRef = doc(db, 'attendance', date, selectedClass, studentId);
+                    const attendanceData = {
+                        class: selectedClass,
+                        date,
+                        studentID: studentId,
+                        present: isPresent,
+                    };
+
+                    await setDoc(attendanceRef, attendanceData, { merge: true });
+                }
+
+                alert('Devamsızlık kaydedildi!');
+            } catch (error) {
+                console.error('Error saving attendance:', error);
+                alert('Devamsızlık kaydedilirken bir hata oluştu.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,62 +1,87 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Öğrenci Paneli - Ödev Kontrol</title>
-    <style>
-        .container { width: 300px; margin: 20px auto; }
-        .homework-item { display: flex; align-items: center; margin: 10px 0; }
-    </style>
+    <title>Ödevler</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Ödev Kontrol</h2>
-        <div id="homework-list"></div>
+    <h1>Ödevler</h1>
+    <div id="homeworkContent">
+        <p>Ödevler yükleniyor...</p>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", loadHomeworks);
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+        import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
 
-        function loadHomeworks() {
-            const homeworks = JSON.parse(localStorage.getItem("homeworks")) || [];
-            const homeworkList = document.getElementById("homework-list");
-            homeworkList.innerHTML = "";
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuJH09nuhqi4zKIWVlopMh6qe46WDlITg",
+            authDomain: "dersimo-31041.firebaseapp.com",
+            projectId: "dersimo-31041",
+            storageBucket: "dersimo-31041.appspot.com",
+            messagingSenderId: "653988435501",
+            appId: "1:653988435501:web:d933b40d23e8628e7b8aa4",
+            measurementId: "G-D2RBEG50Y6"
+        };
 
-            homeworks.forEach((homework, index) => {
-                const div = document.createElement("div");
-                div.className = "homework-item";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-                const checkbox = document.createElement("input");
-                checkbox.type = "checkbox";
-                checkbox.checked = homework.studentDid;
-                checkbox.disabled = homework.teacherChecked; // Öğretmen onayladıysa, checkbox devre dışı
-                checkbox.onchange = () => markAsDone(index);
+        const homeworkContent = document.getElementById('homeworkContent');
 
-                const label = document.createElement("label");
-                
-                // Öğretmen onay durumu veya reddi ekle
-                let statusText = homework.studentDid ? " - İşaretlendi" : "";
-                if (homework.teacherChecked) {
-                    statusText = " - Öğretmen Onayladı";
-                } else if (homework.teacherRejected) {
-                    statusText = " - Öğretmen Reddetti";
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userEmail = user.email;
+
+                try {
+                    // Fetch student class from students collection
+                    const studentsQuery = query(collection(db, "students"), where("email", "==", userEmail));
+                    const studentSnapshot = await getDocs(studentsQuery);
+
+                    if (studentSnapshot.empty) {
+                        homeworkContent.innerHTML = "<p>Öğrenci bilgisi bulunamadı.</p>";
+                        return;
+                    }
+
+                    const studentClass = studentSnapshot.docs[0].data().class;
+
+                    // Fetch homework data from classes/tasks collection
+                    const homeworkQuery = query(collection(db, "classes", studentClass, "tasks"));
+                    const homeworkSnapshot = await getDocs(homeworkQuery);
+
+                    if (homeworkSnapshot.empty) {
+                        homeworkContent.innerHTML = "<p>Bu sınıf için atanmış ödev bulunmamaktadır.</p>";
+                        return;
+                    }
+
+                    // Display homework
+                    let homeworkHTML = '<ul>';
+                    homeworkSnapshot.forEach(doc => {
+                        const homework = doc.data();
+                        homeworkHTML += `
+                            <li>
+                                <strong>Başlık:</strong> ${homework.title}<br>
+                                <strong>Açıklama:</strong> ${homework.description}<br>
+                                <strong>Son Teslim Tarihi:</strong> ${homework.deadline}<br>
+                                <strong>Durum:</strong> ${homework.status}<br>
+                            </li>
+                            <hr>
+                        `;
+                    });
+                    homeworkHTML += '</ul>';
+                    homeworkContent.innerHTML = homeworkHTML;
+                } catch (error) {
+                    console.error("Error fetching homework data:", error);
+                    homeworkContent.innerHTML = "<p>Ödevler alınırken bir hata oluştu.</p>";
                 }
-
-                label.textContent = homework.name + statusText;
-
-                div.appendChild(checkbox);
-                div.appendChild(label);
-                homeworkList.appendChild(div);
-            });
-        }
-
-        function markAsDone(index) {
-            const homeworks = JSON.parse(localStorage.getItem("homeworks"));
-            homeworks[index].studentDid = true;
-            localStorage.setItem("homeworks", JSON.stringify(homeworks));
-            loadHomeworks();
-        }
+            } else {
+                homeworkContent.innerHTML = "<p>Lütfen önce giriş yapın.</p>";
+            }
+        });
     </script>
 </body>
 </html>
